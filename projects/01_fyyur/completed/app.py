@@ -74,7 +74,8 @@ class Artist(db.Model):
     shows = db.relationship('Show', backref = db.backref('artist', lazy=True))
 
 
-# TODO Implement Show and Artist models, and complete all model relationships and properties, as a database migration.
+# TODO Implement Show and Artist models, and complete all model
+# relationships and properties, as a database migration.
 class Show(db.Model):
   __tablename__= 'shows'
 
@@ -106,32 +107,47 @@ app.jinja_env.filters['datetime'] = format_datetime
 def index():
   return render_template('pages/home.html')
 
-
-#  Venues
 #  ----------------------------------------------------------------
-
+#  To show list of Venues at /venues route
+#  ----------------------------------------------------------------
 @app.route('/venues')
 def venues():
   data = []
-  uniqueAreas =  db.session.query(Venue.city, Venue.state).group_by(Venue.city, Venue.state).all()
+  uniqueAreas =  db.session.query(Venue.city, Venue.state)\
+                   .group_by(Venue.city, Venue.state).all()
+    
   for area in uniqueAreas:
     venueTemp = []
-    venueInArea = Venue.query.filter_by(state=area[1]).filter_by(city=area[0]).all()
+    venueInArea = Venue.query.filter_by(state=area[1])\
+                             .filter_by(city=area[0]).all()
     for venue in venueInArea:
       upcomingShow = 0
       for show in venue.shows:
         if show.start_time > datetime.now():
           upcomingShow +=1
-      venueTemp.append({"id": venue.id, "name": venue.name, "num_upcoming_shows": upcomingShow})
-    data.append({"city": area[0], "state": area[1], "venues": venueTemp})
+      venueTemp.append({"id": venue.id,\
+                        "name": venue.name,\
+                        "num_upcoming_shows": upcomingShow})
+    data.append({"city": area[0],\
+                 "state": area[1],\
+                 "venues": venueTemp})
+    
   return render_template('pages/venues.html', areas=data);
+
+
+
+#  ----------------------------------------------------------------
+#  To provide venue search result at /venues/search route
+#  ----------------------------------------------------------------
 
 @app.route('/venues/search', methods=['POST'])
 def search_venues():
   # case insensitive search of venues using city, state and name
   searchTerm = request.form.get("search_term", "")
   searchTerm = "%{}%".format(searchTerm)
-  searchVenues = Venue.query.filter( or_(Venue.name.ilike(searchTerm), Venue.city.ilike(searchTerm), Venue.state.ilike(searchTerm))).all()
+  searchVenues = Venue.query.filter(or_(Venue.name.ilike(searchTerm),\
+                                        Venue.city.ilike(searchTerm),\
+                                        Venue.state.ilike(searchTerm))).all()
   searchVenueCount = len(searchVenues)
   data = []
   for searchVenue in searchVenues:
@@ -139,29 +155,46 @@ def search_venues():
     for show in searchVenue.shows:
       if show.start_time > datetime.now():
         upcomingShow +=1
-    data.append({"id": searchVenue.id, "name": searchVenue.name, "num_upcoming_shows": upcomingShow })
+    data.append({"id": searchVenue.id,\
+                 "name": searchVenue.name,\
+                 "num_upcoming_shows": upcomingShow })
 
   response = {
     "count": searchVenueCount,
     "data": data
   }
-  return render_template('pages/search_venues.html', results=response, search_term=request.form.get('search_term', ''))
+  return render_template('pages/search_venues.html',\
+                         results=response,\
+                         search_term=request.form.get('search_term', ''))
 
+
+
+#--------------------------------------------------
+# To show the venue page with the given venue_id
+#--------------------------------------------------
 @app.route('/venues/<int:venue_id>')
 def show_venue(venue_id):
-  # shows the venue page with the given venue_id
+  
   venueWithID = Venue.query.get(venue_id)
+    
   pastShows, pastShowCount, upcomingShows, upcomingShowCount = [], 0, [], 0
+
   for show in venueWithID.shows:
     if show.start_time > datetime.now():
       showArtist = Artist.query.get(show.artist_id)
-      upcomingShows.append({"artist_id": showArtist.id, "artist_name": showArtist.name, "start_time": str(show.start_time)})
+      upcomingShows.append({"artist_id": showArtist.id,\
+                            "artist_name": showArtist.name,\
+                            "start_time": str(show.start_time)})
       upcomingShowCount +=1
     else:
       showArtist = Artist.query.get(show.artist_id)
-      pastShows.append({"artist_id": showArtist.id, "artist_name": showArtist.name, "start_time": str(show.start_time)})
+      pastShows.append({"artist_id": showArtist.id,\
+                        "artist_name": showArtist.name,\
+                        "start_time": str(show.start_time)})
       pastShowCount +=1
+    
     pastShows, pastShowCount, upcomingShows, upcomingShowCount = [], 0, [], 0
+    
   venueGenres = str(''.join(venueWithID.genres)).strip('\{\}').split(",")
   data = {
     "id": venueWithID.id,
@@ -182,7 +215,9 @@ def show_venue(venue_id):
   }
   return render_template('pages/show_venue.html', venue=data)
 
-#  Create Venue
+
+#  ----------------------------------------------------------------
+#  To create new venue by receiving data from new_venue form
 #  ----------------------------------------------------------------
 
 @app.route('/venues/create', methods=['GET'])
@@ -256,7 +291,9 @@ def delete_venue(venue_id):
     db.session.close()
     return jsonify({'success': True})
 
-#  Artists
+
+#  ----------------------------------------------------------------
+#  Show Artist list at /artist route
 #  ----------------------------------------------------------------
 @app.route('/artists')
 def artists():
@@ -266,12 +303,17 @@ def artists():
     data.append({"id": artist.id, "name": artist.name})
   return render_template('pages/artists.html', artists=data)
 
+#  ----------------------------------------------------------------
+#  Show Artist search result at /artist/search route
+#  ----------------------------------------------------------------
 @app.route('/artists/search', methods=['POST'])
 def search_artists():
   # case-insensearch 
   searchTerm = request.form.get("search_term", "")
   searchTerm = "%{}%".format(searchTerm)
-  searchArtists = Artist.query.filter(or_(Artist.name.ilike(searchTerm), Artist.city.ilike(searchTerm), Artist.state.ilike(searchTerm))).all()
+  searchArtists = Artist.query.filter(or_(Artist.name.ilike(searchTerm),\
+                  Artist.city.ilike(searchTerm),\
+                  Artist.state.ilike(searchTerm))).all()
   searchArtistCount = len(searchArtists)
   data = []
   upcoming_shows = 0
@@ -280,28 +322,46 @@ def search_artists():
       if show.start_time > datetime.now():
         upcoming_shows += 1
     upcoming_shows = 0
-    data.append({"id": searchArtist.id, "name": searchArtist.name, "num_upcoming_shows": upcoming_shows})
+    data.append({"id": searchArtist.id,\
+                 "name": searchArtist.name,\
+                 "num_upcoming_shows": upcoming_shows})
 
   response={
     "count": searchArtistCount,
     "data": data,
   }
-  return render_template('pages/search_artists.html', results=response, search_term=request.form.get('search_term', ''))
+  return render_template('pages/search_artists.html',\
+                         results=response,\
+                         search_term=request.form.get('search_term', ''))
 
+
+
+
+#--------------------------------------------------
+# To show the artist page with the given venue_id
+#--------------------------------------------------
 @app.route('/artists/<int:artist_id>')
 def show_artist(artist_id):
   artistWithID = Artist.query.get(artist_id)
+
   pastShows, pastShowCount, upcomingShows, upcomingShowCount = [], 0, [], 0
+    
   for show in artistWithID.shows:
     if show.start_time > datetime.now():
       showVenue = Venue.query.get(show.venue_id)
-      upcomingShows.append({"venue_id": showVenue.id, "venue_name": showVenue.name, "start_time": str(show.start_time)})
+      upcomingShows.append({"venue_id": showVenue.id,\
+                            "venue_name": showVenue.name,\
+                            "start_time": str(show.start_time)})
       upcomingShowCount +=1
     else:
       showVenue = Venue.query.get(show.venue_id)
-      pastShows.append({"venue_id": showVenue.id, "venue_name": showVenue.name, "start_time": str(show.start_time)})
+      pastShows.append({"venue_id": showVenue.id,\
+                        "venue_name": showVenue.name,\
+                        "start_time": str(show.start_time)})
       pastShowCount +=1
+    
     pastShows, pastShowCount, upcomingShows, upcomingShowCount = [], 0, [], 0
+    
   artistGenres = str(''.join(artistWithID.genres)).strip('\{\}').split(",")
   data = {
     "id": artistWithID.id,
@@ -321,7 +381,10 @@ def show_artist(artist_id):
   }
   return render_template('pages/show_artist.html', artist=data)
 
-#  Update
+
+
+#  ----------------------------------------------------------------
+#  To edit Artist info
 #  ----------------------------------------------------------------
 @app.route('/artists/<int:artist_id>/edit', methods=['GET'])
 def edit_artist(artist_id):
@@ -366,6 +429,10 @@ def edit_artist_submission(artist_id):
       flash_errors(form)
       return render_template('forms/edit_artist.html', form=form, artist=existArtist) 
 
+
+#  ----------------------------------------------------------------
+#  To edit venue info
+#  ----------------------------------------------------------------
 @app.route('/venues/<int:venue_id>/edit', methods=['GET'])
 def edit_venue(venue_id):
   venue = Venue.query.get(venue_id)
@@ -412,7 +479,7 @@ def edit_venue_submission(venue_id):
 
 
 #  ----------------------------------------------------------------
-#  Create Artist
+#  To create Artist by receiving data from new_artist form
 #  ----------------------------------------------------------------
 
 @app.route('/artists/create', methods=['GET'])
@@ -469,6 +536,10 @@ def create_artist_submission():
       flash_errors(form)
       return render_template('forms/new_artist.html', form=form)
 
+
+#  ----------------------------------------------------------------
+#  To delete  specific artist
+#  ----------------------------------------------------------------
 @app.route('/artists/<artist_id>', methods=['DELETE'])
 def delete_artist(artist_id):
   try:
@@ -486,7 +557,7 @@ def delete_artist(artist_id):
     return jsonify({'success': True})
 
 #  ----------------------------------------------------------------
-#  Shows
+#  To provide a lists of Shows
 #  ----------------------------------------------------------------
 
 @app.route('/shows')
@@ -506,6 +577,10 @@ def shows():
     })
   return render_template('pages/shows.html', shows=data)
 
+
+#  ----------------------------------------------------------------
+#  To create a new Show from new_show form
+#  ----------------------------------------------------------------
 @app.route('/shows/create')
 def create_shows():
   # renders form. do not touch.
